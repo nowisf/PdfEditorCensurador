@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import CORS_ORIGINS, UPLOAD_DIR, OUTPUT_DIR
+from .config import CORS_ORIGINS, UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
 from .routes import redaction, metadata, signature, converter, tools
 
 logging.basicConfig(level=logging.INFO)
@@ -41,16 +41,19 @@ async def health():
 
 @app.post("/api/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    """Sube un PDF y retorna informacion basica."""
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Solo se aceptan archivos PDF")
 
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, f"Archivo excede el limite de {MAX_FILE_SIZE // (1024*1024)}MB")
+
     file_id = uuid.uuid4().hex
     tmp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")
-    content = await file.read()
     with open(tmp_path, "wb") as f:
         f.write(content)
 
+    doc = None
     try:
         doc = fitz.open(tmp_path)
         info = {
@@ -71,16 +74,14 @@ async def upload_pdf(file: UploadFile = File(...)):
         metadata = doc.metadata
         info["metadata"] = {k: v for k, v in metadata.items() if v}
         doc.close()
+        doc = None
         return info
     except Exception as e:
         raise HTTPException(500, f"Error procesando PDF: {str(e)}")
-
-
-@app.get("/api/file/{file_id}")
-async def get_file(file_id: str):
-    """Recupera un archivo subido por su ID."""
-    for fname in os.listdir(UPLOAD_DIR):
-        if fname.startswith(file_id):
-            path = os.path.join(UPLOAD_DIR, fname)
-            return FileResponse(path, media_type="application/pdf")
-    raise HTTPException(404, "Archivo no encontrado")
+    finally:
+        if doc:
+            try:
+                doc.close()
+            except Exception:
+                pass
+        safe_remove(tmp_path)

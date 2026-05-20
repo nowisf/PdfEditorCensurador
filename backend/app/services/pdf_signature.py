@@ -135,10 +135,11 @@ class PDFSignature:
             )
             logger.info("Firma digital PKCS#7 aplicada")
         except Exception as e:
-            logger.warning(f"Firma digital no aplicada: {e}. Se usara firma visual.")
-            PDFSignature.add_visual_signature(
-                doc, position, signer_name=signer_name, reason=reason
-            )
+            raise RuntimeError(
+                f"Firma digital PKCS#7 fallida: {e}. "
+                f"Verifique que el certificado sea valido, la contrasena sea correcta "
+                f"y el formato sea .p12/.pfx emitido por una CA reconocida."
+            ) from e
 
         return doc
 

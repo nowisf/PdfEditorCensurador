@@ -187,13 +187,18 @@ class MetadataSanitizer:
     @classmethod
     def _destroy_annotation_metadata(cls, doc: fitz.Document):
         """Limpia metadatos de anotaciones que puedan contener informacion del autor."""
+        errors = []
         for page_idx in range(len(doc)):
-            try:
-                page = doc[page_idx]
-                for annot in page.annits() or []:
+            page = doc[page_idx]
+            annot = page.first_annot
+            while annot:
+                try:
                     annot.set_info(title="", content="", subject="")
-            except Exception:
-                continue
+                except Exception as e:
+                    errors.append(f"Pagina {page_idx}: {e}")
+                annot = annot.next
+        if errors:
+            logger.warning(f"Errores limpiando anotaciones: {errors}")
 
     @classmethod
     def _clean_incremental_updates(cls, doc: fitz.Document):

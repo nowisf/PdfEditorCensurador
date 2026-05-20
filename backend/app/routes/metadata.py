@@ -9,28 +9,45 @@ import json
 
 from ..models.schemas import MetadataSanitizeOptions
 from ..services.pdf_metadata import MetadataSanitizer
-from ..config import UPLOAD_DIR, OUTPUT_DIR
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/metadata", tags=["Metadatos"])
 
 
+def _close_doc(doc):
+    if doc:
+        try:
+            doc.close()
+        except Exception:
+            pass
+
+
 @router.post("/inspect")
 async def inspect_metadata(file: UploadFile = File(...)):
-    """Inspecciona todos los metadatos del PDF antes del saneamiento."""
-    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "Solo se aceptan archivos PDF")
     content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, "Archivo excede el limite")
+
+    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
         f.write(content)
 
+    doc = None
     try:
         doc = fitz.open(tmp_path)
         report = MetadataSanitizer.get_metadata_report(doc)
         doc.close()
+        doc = None
         return report
     except Exception as e:
         raise HTTPException(500, f"Error inspeccionando metadatos: {str(e)}")
+    finally:
+        _close_doc(doc)
+        safe_remove(tmp_path)
 
 
 @router.post("/sanitize")
@@ -38,17 +55,13 @@ async def sanitize_metadata(
     file: UploadFile = File(...),
     options_json: str = Form("{}"),
 ):
-    """
-    Ejecuta saneamiento destructivo de todos los metadatos del PDF.
-    
-    La operacion es IRREVERSIBLE. Se sobreescriben todos los campos,
-    se destruyen flujos XMP, miniaturas y datos ocultos.
-    """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Solo se aceptan archivos PDF")
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, "Archivo excede el limite")
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
-    content = await file.read()
     with open(tmp_path, "wb") as f:
         f.write(content)
 
@@ -58,6 +71,7 @@ async def sanitize_metadata(
     except Exception:
         options = MetadataSanitizeOptions()
 
+    doc = None
     try:
         doc = fitz.open(tmp_path)
         before_report = MetadataSanitizer.get_metadata_report(doc)
@@ -67,6 +81,7 @@ async def sanitize_metadata(
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         doc.save(output_path, garbage=4, clean=True, deflate=True)
         doc.close()
+        doc = None
 
         verify_doc = fitz.open(output_path)
         after_report = MetadataSanitizer.get_metadata_report(verify_doc)
@@ -84,3 +99,6 @@ async def sanitize_metadata(
     except Exception as e:
         logger.error(f"Error en saneamiento: {e}")
         raise HTTPException(500, f"Error saneando metadatos: {str(e)}")
+    finally:
+        _close_doc(doc)
+        safe_remove(tmp_path)

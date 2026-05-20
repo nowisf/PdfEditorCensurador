@@ -8,11 +8,19 @@ import json
 
 from ..models.schemas import SignaturePosition, ProtectionOptions
 from ..services.pdf_signature import PDFSignature, PDFProtection
-from ..config import UPLOAD_DIR, OUTPUT_DIR
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/signature", tags=["Firma y Proteccion"])
+
+
+def _close_doc(doc):
+    if doc:
+        try:
+            doc.close()
+        except Exception:
+            pass
 
 
 @router.post("/visual-signature")
@@ -25,12 +33,13 @@ async def add_visual_signature(
     include_hash: str = Form("true"),
     include_box: str = Form("true"),
 ):
-    """Agrega firma visual con hash de integridad al PDF."""
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Solo se aceptan archivos PDF")
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, "Archivo excede el limite")
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
-    content = await file.read()
     with open(tmp_path, "wb") as f:
         f.write(content)
 
@@ -38,8 +47,10 @@ async def add_visual_signature(
         pos_data = json.loads(position_json)
         position = SignaturePosition(**pos_data)
     except Exception as e:
+        safe_remove(tmp_path)
         raise HTTPException(400, f"Posicion invalida: {str(e)}")
 
+    doc = None
     try:
         import fitz
         doc = fitz.open(tmp_path)
@@ -56,14 +67,14 @@ async def add_visual_signature(
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         doc.save(output_path, garbage=4, deflate=True)
         doc.close()
+        doc = None
 
-        return FileResponse(
-            output_path,
-            media_type="application/pdf",
-            filename=output_filename,
-        )
+        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
         raise HTTPException(500, f"Error firmando PDF: {str(e)}")
+    finally:
+        _close_doc(doc)
+        safe_remove(tmp_path)
 
 
 @router.post("/digital-signature")
@@ -75,17 +86,20 @@ async def digital_signature(
     signer_name: str = Form(""),
     reason: str = Form("Firma digital para Transparencia Activa"),
 ):
-    """Agrega firma digital PKCS#7 usando certificado .p12/.pfx."""
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Solo se aceptan archivos PDF")
 
-    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, "Archivo excede el limite")
+
+    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
         f.write(content)
 
     cert_ext = certificate.filename.lower()
     if not (cert_ext.endswith(".p12") or cert_ext.endswith(".pfx")):
+        safe_remove(tmp_path)
         raise HTTPException(400, "El certificado debe ser .p12 o .pfx")
 
     cert_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{certificate.filename}")
@@ -97,8 +111,10 @@ async def digital_signature(
         pos_data = json.loads(position_json)
         position = SignaturePosition(**pos_data)
     except Exception as e:
+        safe_remove(tmp_path, cert_path)
         raise HTTPException(400, f"Posicion invalida: {str(e)}")
 
+    doc = None
     try:
         import fitz
         doc = fitz.open(tmp_path)
@@ -111,23 +127,14 @@ async def digital_signature(
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         doc.save(output_path, garbage=4, deflate=True)
         doc.close()
+        doc = None
 
-        try:
-            os.unlink(cert_path)
-        except Exception:
-            pass
-
-        return FileResponse(
-            output_path,
-            media_type="application/pdf",
-            filename=output_filename,
-        )
+        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        try:
-            os.unlink(cert_path)
-        except Exception:
-            pass
         raise HTTPException(500, f"Error firmando digitalmente: {str(e)}")
+    finally:
+        _close_doc(doc)
+        safe_remove(tmp_path, cert_path)
 
 
 @router.post("/protect")
@@ -135,12 +142,14 @@ async def protect_pdf(
     file: UploadFile = File(...),
     options_json: str = Form(...),
 ):
-    """Aplica encriptacion AES-256 y permisos al PDF."""
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Solo se aceptan archivos PDF")
 
-    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, "Archivo excede el limite")
+
+    tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
         f.write(content)
 
@@ -148,8 +157,10 @@ async def protect_pdf(
         opts_data = json.loads(options_json)
         options = ProtectionOptions(**opts_data)
     except Exception as e:
+        safe_remove(tmp_path)
         raise HTTPException(400, f"Opciones de proteccion invalidas: {str(e)}")
 
+    doc = None
     try:
         import fitz
         doc = fitz.open(tmp_path)
@@ -158,11 +169,11 @@ async def protect_pdf(
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         PDFProtection.save_protected(doc, output_path, options)
         doc.close()
+        doc = None
 
-        return FileResponse(
-            output_path,
-            media_type="application/pdf",
-            filename=output_filename,
-        )
+        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
         raise HTTPException(500, f"Error protegiendo PDF: {str(e)}")
+    finally:
+        _close_doc(doc)
+        safe_remove(tmp_path)

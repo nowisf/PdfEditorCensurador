@@ -225,11 +225,7 @@ function ConvertPanel({ pdfFile, loading, setLoading, onApplyResult }) {
     if (imgFiles.length === 0) return
     setLoading(true)
     try {
-      const formData = new FormData()
-      imgFiles.forEach((f) => formData.append('files', f))
-      const resp = await fetch('/api/converter/images-to-pdf', { method: 'POST', body: formData })
-      const blob = await resp.blob()
-      const file = new File([blob], 'convertido.pdf', { type: 'application/pdf' })
+      const blob = await api.imagesToPdf(imgFiles)
       if (onApplyResult) {
         await onApplyResult(blob, 'convertido.pdf')
       } else {
@@ -251,11 +247,7 @@ function ConvertPanel({ pdfFile, loading, setLoading, onApplyResult }) {
     if (!pdfFile) return
     setLoading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', pdfFile)
-      formData.append('dpi', '200')
-      const resp = await fetch('/api/converter/pdf-to-images', { method: 'POST', body: formData })
-      const blob = await resp.blob()
+      const blob = await api.pdfToImages(pdfFile)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -273,10 +265,7 @@ function ConvertPanel({ pdfFile, loading, setLoading, onApplyResult }) {
     if (pdfFiles.length < 2) return
     setLoading(true)
     try {
-      const formData = new FormData()
-      pdfFiles.forEach((f) => formData.append('files', f))
-      const resp = await fetch('/api/converter/merge', { method: 'POST', body: formData })
-      const blob = await resp.blob()
+      const blob = await api.mergePdfs(pdfFiles)
       if (onApplyResult) {
         await onApplyResult(blob, 'combinado.pdf')
       } else {

@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_BASE = window.location.hostname === 'localhost' ? '/api' : '/_/backend/api'
+const API_BASE = import.meta.env.VITE_API_BASE || (
+  window.location.hostname === 'localhost' ? '/api' : '/_/backend/api'
+)
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -204,5 +206,35 @@ export async function addText(file, page, x, y, width, height, text, fontsize = 
     formData.append('fontfile', customFont)
   }
   const response = await api.post('/tools/add-text', formData, { responseType: 'blob' })
+  return response.data
+}
+
+export function getApiUrl(path) {
+  return `${API_BASE}${path}`
+}
+
+export async function imagesToPdf(files) {
+  const formData = new FormData()
+  for (const f of files) {
+    formData.append('files', f)
+  }
+  const response = await api.post('/converter/images-to-pdf', formData, { responseType: 'blob' })
+  return response.data
+}
+
+export async function pdfToImages(file, dpi = 200) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('dpi', dpi)
+  const response = await api.post('/converter/pdf-to-images', formData, { responseType: 'blob' })
+  return response.data
+}
+
+export async function mergePdfs(files) {
+  const formData = new FormData()
+  for (const f of files) {
+    formData.append('files', f)
+  }
+  const response = await api.post('/converter/merge', formData, { responseType: 'blob' })
   return response.data
 }
