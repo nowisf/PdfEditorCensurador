@@ -334,7 +334,7 @@ export default function App() {
               redactionZones={redactionZones}
               redactionMode={
                 activePanel === 'signature' ? 'signature'
-                : activePanel === 'text' ? 'text'
+                : activePanel === 'text' ? 'text-insert'
                 : redactionMode
               }
               onRemoveZone={handleRemoveZone}

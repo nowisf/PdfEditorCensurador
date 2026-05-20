@@ -134,7 +134,7 @@ export default function PDFViewer({
         }
         if (redactionMode === 'signature') {
           onAddSignature({ page: pageIdx, ...pdfCoords })
-        } else if (redactionMode === 'text') {
+        } else if (redactionMode === 'text-insert') {
           onAddText({ page: pageIdx, ...pdfCoords })
         } else {
           onAddZone({ ...pdfCoords, page: pageIdx })
@@ -149,7 +149,7 @@ export default function PDFViewer({
 
   const indicatorText = redactionMode === 'signature'
     ? 'Modo firma activo - Dibuje la zona para la firma'
-    : redactionMode === 'text'
+    : redactionMode === 'text-insert'
     ? 'Modo texto activo - Dibuje la zona donde insertar texto'
     : 'Modo censura activo - Dibuje zonas sobre el documento'
 
@@ -225,7 +225,7 @@ export default function PDFViewer({
       elements.push(
         <div key="draw" className={`redaction-zone ${
           redactionMode === 'signature' ? 'zone-drawing-signature'
-          : redactionMode === 'text' ? 'zone-drawing-text'
+          : redactionMode === 'text-insert' ? 'zone-drawing-text'
           : 'zone-drawing'
         }`} style={{
           left: Math.min(drawStart.x, drawCurrent.x),
@@ -265,8 +265,8 @@ export default function PDFViewer({
           </button>
         </div>
         {isInteractive && (
-          <div className={`drawing-indicator ${redactionMode === 'signature' ? 'indicator-signature' : redactionMode === 'text' ? 'indicator-text' : ''}`}>
-            <span className={`pulse-dot ${redactionMode === 'signature' ? 'dot-signature' : redactionMode === 'text' ? 'dot-text' : ''}`} />
+          <div className={`drawing-indicator ${redactionMode === 'signature' ? 'indicator-signature' : redactionMode === 'text-insert' ? 'indicator-text' : ''}`}>
+            <span className={`pulse-dot ${redactionMode === 'signature' ? 'dot-signature' : redactionMode === 'text-insert' ? 'dot-text' : ''}`} />
             {indicatorText}
           </div>
         )}
