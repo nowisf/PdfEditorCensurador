@@ -13,4 +13,8 @@ CORS_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    os.environ.get("VERCEL_URL", ""),
+    "https://" + os.environ.get("VERCEL_URL", "") if os.environ.get("VERCEL_URL") else "",
 ]
+
+CORS_ORIGINS = [o for o in CORS_ORIGINS if o]
