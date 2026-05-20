@@ -15,6 +15,7 @@ export default function PDFViewer({
   textZone,
   onAddText,
   textPreview,
+  signaturePreview,
 }) {
   const [pageImages, setPageImages] = useState({})
   const [scale, setScale] = useState(1)
@@ -178,10 +179,29 @@ export default function PDFViewer({
     })
 
     if (signatureZone && signatureZone.page === pageIdx) {
+      const sigLines = []
+      if (signaturePreview?.signerName) sigLines.push(`Firmado por: ${signaturePreview.signerName}`)
+      if (signaturePreview?.signerRut) sigLines.push(`RUT: ${signaturePreview.signerRut}`)
+      sigLines.push(`Motivo: ${signaturePreview?.reason || 'Firma'}`)
+      if (signaturePreview?.includeHash) {
+        sigLines.push('SHA-256: (hash al firmar)')
+      }
+      const sigFontSize = 7 * (elRect.width / pi.width)
       elements.push(
         <div key="sig" className="redaction-zone zone-signature"
           style={{ left: signatureZone.x * sx, top: signatureZone.y * sy, width: signatureZone.width * sx, height: signatureZone.height * sy }}>
           <div className="zone-label">FIRMA</div>
+          {signaturePreview && sigLines.length > 0 && (
+            <div className="sig-preview-content" style={{
+              fontSize: sigFontSize,
+              lineHeight: 1.4,
+              padding: `${sigFontSize * 0.5}px ${sigFontSize}px`,
+              color: '#111',
+              fontFamily: 'Helvetica, Arial, sans-serif',
+            }}>
+              {sigLines.map((l, i) => <div key={i}>{l}</div>)}
+            </div>
+          )}
         </div>
       )
     }

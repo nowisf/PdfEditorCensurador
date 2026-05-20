@@ -36,45 +36,20 @@ class PDFSignature:
         reason: str = "Firma para Transparencia Activa",
         image_path: Optional[str] = None,
         include_hash: bool = True,
+        include_box: bool = True,
     ) -> fitz.Document:
-        """
-        Agrega una firma visual (no criptografica) al PDF.
-        
-        Incluye:
-        - Recuadro con informacion del firmante
-        - Fecha y hora de firma
-        - Hash SHA-256 del documento (integridad)
-        - Imagen de firma escaneada (opcional)
-        """
         if position.page >= len(doc):
             raise ValueError(f"Pagina {position.page} fuera de rango")
 
         page = doc[position.page]
-        rect = fitz.Rect(
-            position.x, position.y,
-            position.x + position.width,
-            position.y + position.height,
-        )
 
         doc_hash = PDFSignature._compute_document_hash(doc) if include_hash else None
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        shape = page.new_shape()
-        shape.draw_rect(rect)
-        shape.finish(color=(0, 0, 0.6), width=1.5)
-        
-        inner_rect = fitz.Rect(rect.x0 + 5, rect.y0 + 5, rect.x1 - 5, rect.y1 - 5)
-        
-        if image_path and os.path.exists(image_path):
-            img_rect = fitz.Rect(rect.x0 + 5, rect.y0 + 5, rect.x0 + 55, rect.y0 + 55)
-            shape.insert_image(img_rect, filename=image_path)
-            text_x = rect.x0 + 60
-        else:
-            text_x = rect.x0 + 8
-
-        text_y = rect.y0 + 8
         font_size = 7
-        
+        line_height = font_size + 3
+        padding = 8
+
         lines = [
             f"Firmado por: {signer_name}",
             f"RUT: {signer_rut}",
@@ -86,6 +61,22 @@ class PDFSignature:
             lines.append(f"SHA-256: {doc_hash[:32]}")
             lines.append(f"         {doc_hash[32:]}")
 
+        text_height = padding + len(lines) * line_height + padding
+
+        rect = fitz.Rect(
+            position.x, position.y,
+            position.x + position.width,
+            position.y + max(position.height, text_height),
+        )
+
+        shape = page.new_shape()
+        if include_box:
+            shape.draw_rect(rect)
+            shape.finish(color=(0, 0, 0.6), width=1.5)
+
+        text_x = rect.x0 + padding
+        text_y = rect.y0 + padding + font_size
+
         for line in lines:
             shape.insert_text(
                 fitz.Point(text_x, text_y),
@@ -94,7 +85,7 @@ class PDFSignature:
                 fontname="helv",
                 color=(0, 0, 0),
             )
-            text_y += font_size + 3
+            text_y += line_height
 
         shape.commit()
         logger.info(f"Firma visual agregada en pagina {position.page}")

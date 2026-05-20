@@ -22,6 +22,8 @@ export default function App() {
   const [signatureZone, setSignatureZone] = useState(null)
   const [textZone, setTextZone] = useState(null)
   const [textPreview, setTextPreview] = useState({ content: '', fontSize: 12, align: 0, font: 'helv' })
+  const [uploading, setUploading] = useState(false)
+  const [signaturePreview, setSignaturePreview] = useState({ signerName: '', signerRut: '', reason: 'Firma para Transparencia Activa', includeHash: true })
   const fileInputRef = useRef(null)
   const dragCounter = useRef(0)
 
@@ -31,7 +33,7 @@ export default function App() {
       setStatusMessage({ type: 'error', text: 'Solo se aceptan archivos PDF' })
       return
     }
-    setPdfFile(file)
+    setUploading(true)
     setRedactionZones([])
     setUndoStack([])
     setRedoStack([])
@@ -40,10 +42,14 @@ export default function App() {
     setStatusMessage(null)
     try {
       const info = await api.uploadPDF(file)
+      setPdfFile(file)
       setPdfInfo(info)
       setStatusMessage({ type: 'success', text: `PDF cargado: ${info.pages} paginas` })
     } catch (err) {
+      setPdfFile(null)
       setStatusMessage({ type: 'error', text: `Error al cargar PDF: ${err.message}` })
+    } finally {
+      setUploading(false)
     }
   }, [])
 
@@ -324,7 +330,15 @@ export default function App() {
         </aside>
 
         <section className="viewer-section">
-          {pdfFile ? (
+          {uploading ? (
+            <div className="empty-state">
+              <div className="upload-spinner-container">
+                <div className="upload-spinner" />
+              </div>
+              <h2>Cargando documento...</h2>
+              <p>Procesando PDF, por favor espere</p>
+            </div>
+          ) : pdfFile ? (
             <PDFViewer
               pdfFile={pdfFile}
               pdfInfo={pdfInfo}
@@ -343,6 +357,7 @@ export default function App() {
               textZone={textZone}
               onAddText={setTextZone}
               textPreview={textPreview}
+              signaturePreview={signaturePreview}
             />
           ) : (
             <div className="empty-state">
@@ -372,7 +387,7 @@ export default function App() {
 
         {pdfFile && activePanel === 'signature' && (
           <aside className="sidebar-right">
-            <SignaturePanel pdfFile={pdfFile} onApplyResult={applyResultToViewer} signatureZone={signatureZone} />
+            <SignaturePanel pdfFile={pdfFile} onApplyResult={applyResultToViewer} signatureZone={signatureZone} signaturePreview={signaturePreview} onSignaturePreview={setSignaturePreview} />
           </aside>
         )}
       </main>

@@ -62,7 +62,7 @@ export async function sanitizeMetadata(file, options = {}) {
   return response.data
 }
 
-export async function addVisualSignature(file, position, signerName, signerRut, reason, includeHash = true) {
+export async function addVisualSignature(file, position, signerName, signerRut, reason, includeHash = true, includeBox = true) {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('position_json', JSON.stringify(position))
@@ -70,6 +70,7 @@ export async function addVisualSignature(file, position, signerName, signerRut, 
   formData.append('signer_rut', signerRut)
   formData.append('reason', reason)
   formData.append('include_hash', String(includeHash))
+  formData.append('include_box', String(includeBox))
   const response = await api.post('/signature/visual-signature', formData, {
     responseType: 'blob',
   })

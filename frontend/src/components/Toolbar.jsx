@@ -170,7 +170,7 @@ export default function Toolbar({
             disabled={!pdfFile || loading}
             onClick={onSanitizeMetadata}
           >
-            Destruir Metadatos
+            Destruir TODOS los Metadatos
           </button>
         </div>
       )}

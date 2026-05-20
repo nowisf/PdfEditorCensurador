@@ -1,13 +1,9 @@
 import { useState, useRef } from 'react'
 import * as api from '../services/api'
 
-export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone }) {
-  const [signerName, setSignerName] = useState('')
-  const [signerRut, setSignerRut] = useState('')
-  const [reason, setReason] = useState('Firma para Transparencia Activa')
+export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone, signaturePreview, onSignaturePreview }) {
   const [loading, setLoading] = useState(false)
   const [signatureType, setSignatureType] = useState('visual')
-  const [includeHash, setIncludeHash] = useState(true)
 
   const [certFile, setCertFile] = useState(null)
   const [certPassword, setCertPassword] = useState('')
@@ -18,6 +14,9 @@ export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone }
   const [allowPrint, setAllowPrint] = useState(false)
   const [allowCopy, setAllowCopy] = useState(false)
 
+  const sp = signaturePreview
+  const setSp = (update) => onSignaturePreview({ ...sp, ...update })
+
   const position = signatureZone
     ? { page: signatureZone.page, x: signatureZone.x, y: signatureZone.y, width: signatureZone.width, height: signatureZone.height }
     : { page: 0, x: 400, y: 700, width: 200, height: 80 }
@@ -27,7 +26,7 @@ export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone }
     setLoading(true)
     try {
       const blob = await api.addVisualSignature(
-        pdfFile, position, signerName, signerRut, reason, includeHash
+        pdfFile, position, sp.signerName, sp.signerRut, sp.reason, sp.includeHash, sp.includeBox
       )
       await onApplyResult(blob, `FIRMADO_${pdfFile.name}`)
     } catch (err) {
@@ -42,7 +41,7 @@ export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone }
     setLoading(true)
     try {
       const blob = await api.digitalSignature(
-        pdfFile, certFile, certPassword, position, signerName, reason
+        pdfFile, certFile, certPassword, position, sp.signerName, sp.reason
       )
       await onApplyResult(blob, `FIRMADO_DIGITAL_${pdfFile.name}`)
     } catch (err) {
@@ -79,15 +78,15 @@ export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone }
 
       <div className="form-group">
         <label>Nombre del Firmante</label>
-        <input type="text" value={signerName} onChange={(e) => setSignerName(e.target.value)} placeholder="Juan Perez Lopez" />
+        <input type="text" value={sp.signerName} onChange={(e) => setSp({ signerName: e.target.value })} placeholder="Juan Perez Lopez" />
       </div>
       <div className="form-group">
         <label>RUT</label>
-        <input type="text" value={signerRut} onChange={(e) => setSignerRut(e.target.value)} placeholder="12.345.678-9" />
+        <input type="text" value={sp.signerRut} onChange={(e) => setSp({ signerRut: e.target.value })} placeholder="12.345.678-9" />
       </div>
       <div className="form-group">
         <label>Motivo</label>
-        <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <input type="text" value={sp.reason} onChange={(e) => setSp({ reason: e.target.value })} />
       </div>
 
       <div className="sig-position-info">
@@ -124,8 +123,14 @@ export default function SignaturePanel({ pdfFile, onApplyResult, signatureZone }
         <>
           <div className="form-group">
             <label className="checkbox-label">
-              <input type="checkbox" checked={includeHash} onChange={(e) => setIncludeHash(e.target.checked)} />
+              <input type="checkbox" checked={sp.includeHash} onChange={(e) => setSp({ includeHash: e.target.checked })} />
               Incluir hash SHA-256 de integridad
+            </label>
+          </div>
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input type="checkbox" checked={sp.includeBox} onChange={(e) => setSp({ includeBox: e.target.checked })} />
+              Incluir recuadro azul
             </label>
           </div>
           <button className="btn btn-primary btn-full" disabled={!pdfFile || loading} onClick={handleVisualSign}>

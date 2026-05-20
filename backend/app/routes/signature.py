@@ -23,6 +23,7 @@ async def add_visual_signature(
     signer_rut: str = Form(""),
     reason: str = Form("Firma para Transparencia Activa"),
     include_hash: str = Form("true"),
+    include_box: str = Form("true"),
 ):
     """Agrega firma visual con hash de integridad al PDF."""
     if not file.filename.lower().endswith(".pdf"):
@@ -48,6 +49,7 @@ async def add_visual_signature(
             signer_rut=signer_rut,
             reason=reason,
             include_hash=include_hash.lower() in ("true", "1", "yes"),
+            include_box=include_box.lower() in ("true", "1", "yes"),
         )
 
         output_filename = f"SIGNED_{uuid.uuid4().hex}_{file.filename}"
