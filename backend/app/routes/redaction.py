@@ -10,32 +10,16 @@ import json
 
 from ..models.schemas import RedactionZone, ImageRedactionMethod
 from ..services.pdf_redaction import RedactionEngine
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES, validate_pdf_upload
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/redaction", tags=["Redaccion"])
 
 
-def _read_and_validate(file: UploadFile):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Solo se aceptan archivos PDF")
-    content = b""
-    chunks = []
-    total = 0
-    while True:
-        chunk = asyncio_run_sync_or_read(file)
-        if not chunk:
-            break
-    return content
-
-
 async def _save_upload(file: UploadFile) -> tuple[str, bytes]:
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Solo se aceptan archivos PDF")
     content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(413, f"Archivo excede {MAX_FILE_SIZE // (1024*1024)}MB")
+    validate_pdf_upload(content, file.filename)
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
         f.write(content)

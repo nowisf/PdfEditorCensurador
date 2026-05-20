@@ -8,7 +8,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse
 
 from ..services.pdf_converter import PDFConverter
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES, validate_pdf_upload
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def images_to_pdf(files: List[UploadFile] = File(...)):
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         PDFConverter.images_to_pdf(image_paths, output_path)
 
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except HTTPException:
         raise
     except Exception as e:
@@ -62,7 +62,7 @@ async def pdf_to_images(file: UploadFile = File(...), dpi: int = Form(200)):
             for p in paths:
                 zf.write(p, os.path.basename(p))
 
-        return FileResponse(zip_path, media_type="application/zip", filename="paginas.zip")
+        return TempFileResponse(zip_path, media_type="application/zip", filename="paginas.zip", cleanup_after=[zip_path])
     except Exception as e:
         logger.error(f"Error convirtiendo PDF a imagenes: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -87,7 +87,7 @@ async def merge_pdfs(files: List[UploadFile] = File(...)):
         output_path = os.path.join(OUTPUT_DIR, output_filename)
         PDFConverter.merge_pdfs(pdf_paths, output_path)
 
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except HTTPException:
         raise
     except Exception as e:

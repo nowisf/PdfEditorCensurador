@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import CORS_ORIGINS, UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES
+from .config import CORS_ORIGINS, UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES, validate_pdf_upload
 from .routes import redaction, metadata, signature, converter, tools
 
 logging.basicConfig(level=logging.INFO)
@@ -45,8 +45,10 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(400, "Solo se aceptan archivos PDF")
 
     content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(413, f"Archivo excede el limite de {MAX_FILE_SIZE // (1024*1024)}MB")
+    try:
+        validate_pdf_upload(content, file.filename)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
     file_id = uuid.uuid4().hex
     tmp_path = os.path.join(UPLOAD_DIR, f"{file_id}_{file.filename}")

@@ -8,7 +8,7 @@ import json
 
 from ..models.schemas import SignaturePosition, ProtectionOptions
 from ..services.pdf_signature import PDFSignature, PDFProtection
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES, validate_pdf_upload
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,11 @@ async def add_visual_signature(
     include_hash: str = Form("true"),
     include_box: str = Form("true"),
 ):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Solo se aceptan archivos PDF")
     content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(413, "Archivo excede el limite")
+    try:
+        validate_pdf_upload(content, file.filename)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:

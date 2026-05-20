@@ -9,7 +9,7 @@ import json
 
 from ..models.schemas import MetadataSanitizeOptions
 from ..services.pdf_metadata import MetadataSanitizer
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES, validate_pdf_upload
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +26,7 @@ def _close_doc(doc):
 
 @router.post("/inspect")
 async def inspect_metadata(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Solo se aceptan archivos PDF")
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(413, "Archivo excede el limite")
+    content = await file.read()`n    try:`n        validate_pdf_upload(content, file.filename)`n    except ValueError as e:`n        raise HTTPException(400, str(e))
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
@@ -56,11 +52,7 @@ async def sanitize_metadata(
     file: UploadFile = File(...),
     options_json: str = Form("{}"),
 ):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Solo se aceptan archivos PDF")
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(413, "Archivo excede el limite")
+    content = await file.read()`n    try:`n        validate_pdf_upload(content, file.filename)`n    except ValueError as e:`n        raise HTTPException(400, str(e))
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:

@@ -12,7 +12,7 @@ from ..services.pdf_sensitive import SensitiveDataDetector
 from ..services.pdf_pages import PageManager
 from ..services.pdf_watermark import Watermarker
 from ..services.audit_log import AuditLogger
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES, validate_pdf_upload
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ async def rotate_pages(
         doc.close()
 
         AuditLogger.log_operation("rotate_pages", file.filename, {"pages": page_indices, "degrees": degrees})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
         logger.error(f"Error rotando paginas: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -92,7 +92,7 @@ async def delete_pages(
         doc.close()
 
         AuditLogger.log_operation("delete_pages", file.filename, {"pages_removed": page_indices})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
         logger.error(f"Error eliminando paginas: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -121,7 +121,7 @@ async def reorder_pages(
         doc.close()
 
         AuditLogger.log_operation("reorder_pages", file.filename, {"new_order": new_order})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
         logger.error(f"Error reordenando paginas: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -151,7 +151,7 @@ async def apply_watermark(
         doc.close()
 
         AuditLogger.log_operation("watermark", file.filename, {"text": text})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
         logger.error(f"Error aplicando marca de agua: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -181,7 +181,7 @@ async def apply_stamp(
         doc.close()
 
         AuditLogger.log_operation("stamp", file.filename, {"text": text, "page": page})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
         logger.error(f"Error aplicando sello: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -289,7 +289,7 @@ async def add_pages(
         doc.close()
 
         AuditLogger.log_operation("add_pages", file.filename, {"count": count, "position": position})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
         logger.error(f"Error agregando paginas: {e}")
         raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
@@ -363,7 +363,7 @@ async def add_text(
         doc = None
 
         AuditLogger.log_operation("add_text", file.filename, {"page": page, "text_length": len(text), "font": fontname})
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except HTTPException:
         raise
     except Exception as e:
