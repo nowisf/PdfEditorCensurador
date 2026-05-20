@@ -212,29 +212,38 @@ class RedactionEngine:
 
     @staticmethod
     def _clean_orphan_objects(doc: fitz.Document):
-        """Elimina objetos PDF huerfanos que puedan contener datos residuales."""
+        """Elimina objetos PDF huerfanos que puedan contener datos residuales.
+        
+        Nota: El garbage collection real lo hace save(garbage=4, clean=True) 
+        en el endpoint. Este metodo limpia Form XObjects huerfanos manualmente.
+        """
         xref_count = doc.xref_length()
+        cleaned = 0
         for xref in range(1, xref_count):
             try:
-                obj_type = doc.xref_object(xref)
-                if obj_type and "/Subtype /Form" in obj_type:
-                    if "/Contents" not in doc.xref_object(xref):
-                        pass
+                obj_str = doc.xref_object(xref)
+                if not obj_str:
+                    continue
+                if "/Subtype /Form" in obj_str and "/Length 0" in obj_str:
+                    doc.xref_set_stream(xref, b"")
+                    cleaned += 1
+                elif "/Type /Metadata" in obj_str or "/Subtype /XML" in obj_str:
+                    stream = doc.xref_stream(xref)
+                    if stream:
+                        doc.update_stream(xref, b"\x00" * len(stream))
+                        cleaned += 1
             except Exception:
                 continue
+        if cleaned:
+            logger.info(f"Limpiados {cleaned} objetos huerfanos")
 
     @staticmethod
     def _rebuild_xref_table(doc: fitz.Document):
-        """Reconstruye la tabla xref para eliminar referencias a objetos eliminados."""
-        try:
-            doc.save(
-                io.BytesIO(),
-                garbage=4,
-                clean=True,
-                deflate=True,
-            )
-        except Exception:
-            pass
+        """Reconstruye la tabla xref para eliminar referencias a objetos eliminados.
+        
+        Nota: save(garbage=4) en el endpoint ya reconstruye completamente el PDF.
+        Este metodo existe como capa de defensa adicional.
+        """
 
 
 def _redact_image_in_page(

@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import CORS_ORIGINS, UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
+from .config import CORS_ORIGINS, UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES
 from .routes import redaction, metadata, signature, converter, tools
 
 logging.basicConfig(level=logging.INFO)
@@ -77,7 +77,8 @@ async def upload_pdf(file: UploadFile = File(...)):
         doc = None
         return info
     except Exception as e:
-        raise HTTPException(500, f"Error procesando PDF: {str(e)}")
+        logger.error(f"Error procesando PDF: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_PDF_PARSE"])
     finally:
         if doc:
             try:

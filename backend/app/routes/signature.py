@@ -8,7 +8,7 @@ import json
 
 from ..models.schemas import SignaturePosition, ProtectionOptions
 from ..services.pdf_signature import PDFSignature, PDFProtection
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +69,10 @@ async def add_visual_signature(
         doc.close()
         doc = None
 
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
-        raise HTTPException(500, f"Error firmando PDF: {str(e)}")
+        logger.error(f"Error firmando PDF: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_SIGNATURE"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)
@@ -129,9 +130,10 @@ async def digital_signature(
         doc.close()
         doc = None
 
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
-        raise HTTPException(500, f"Error firmando digitalmente: {str(e)}")
+        logger.error(f"Error firmando digitalmente: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_SIGNATURE"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path, cert_path)
@@ -171,9 +173,10 @@ async def protect_pdf(
         doc.close()
         doc = None
 
-        return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
+        return TempFileResponse(output_path, media_type="application/pdf", filename=output_filename, cleanup_after=[output_path])
     except Exception as e:
-        raise HTTPException(500, f"Error protegiendo PDF: {str(e)}")
+        logger.error(f"Error protegiendo PDF: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_SIGNATURE"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)

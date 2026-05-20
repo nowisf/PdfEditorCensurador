@@ -10,7 +10,7 @@ import json
 
 from ..models.schemas import RedactionZone, ImageRedactionMethod
 from ..services.pdf_redaction import RedactionEngine
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -75,11 +75,12 @@ async def render_page(
         doc.close()
         doc = None
 
-        return FileResponse(img_path, media_type="image/png")
+        return TempFileResponse(img_path, media_type="image/png", cleanup_after=[img_path])
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Error renderizando pagina: {str(e)}")
+        logger.error(f"Error renderizando pagina: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_PDF_PARSE"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)
@@ -108,7 +109,8 @@ async def get_page_info(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Error leyendo PDF: {str(e)}")
+        logger.error(f"Error leyendo PDF: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_PDF_PARSE"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)
@@ -151,17 +153,23 @@ async def apply_redaction(
         verification = _verify_all_redactions(verify_doc, zones)
         verify_doc.close()
 
-        return FileResponse(
+        if not verification["all_clean"]:
+            logger.error(f"Verificacion de censura fallo: {verification['zones']}")
+            safe_remove(output_path)
+            raise HTTPException(422, ERROR_CODES["ERR_REDACTION_VERIFY"])
+
+        return TempFileResponse(
             output_path,
             media_type="application/pdf",
             filename=output_filename,
+            cleanup_after=[output_path],
             headers={"X-Redaction-Verified": str(verification["all_clean"])},
         )
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error en redaccion: {e}")
-        raise HTTPException(500, f"Error aplicando redaccion: {str(e)}")
+        raise HTTPException(500, ERROR_CODES["ERR_REDACTION_VERIFY"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)
@@ -183,7 +191,8 @@ async def extract_text(file: UploadFile = File(...), page: int = Form(0)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Error extrayendo texto: {str(e)}")
+        logger.error(f"Error extrayendo texto: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_PDF_PARSE"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)

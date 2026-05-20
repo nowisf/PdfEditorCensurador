@@ -422,8 +422,8 @@ function DetectPanel({ pdfFile, loading, setLoading, onApplyResult }) {
 
   return (
     <div className="toolbar-section">
-      <h3 className="toolbar-section-title">Deteccion Automatica</h3>
-      <p className="section-desc">Busca RUTs, emails, telefonos y otros datos sensibles.</p>
+      <h3 className="toolbar-section-title">Asistente de Deteccion</h3>
+      <p className="section-desc">Herramienta de asistencia que busca RUTs, emails, telefonos y otros datos sensibles. Verifique manualmente los resultados.</p>
       <button className="btn btn-primary btn-full" disabled={!pdfFile || loading} onClick={handleDetect}>
         {loading ? 'Escaneando...' : 'Escanear Datos Sensibles'}
       </button>

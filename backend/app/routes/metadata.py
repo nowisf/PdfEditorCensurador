@@ -9,7 +9,7 @@ import json
 
 from ..models.schemas import MetadataSanitizeOptions
 from ..services.pdf_metadata import MetadataSanitizer
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,8 @@ async def inspect_metadata(file: UploadFile = File(...)):
         doc = None
         return report
     except Exception as e:
-        raise HTTPException(500, f"Error inspeccionando metadatos: {str(e)}")
+        logger.error(f"Error inspeccionando metadatos: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_METADATA"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)
@@ -87,10 +88,11 @@ async def sanitize_metadata(
         after_report = MetadataSanitizer.get_metadata_report(verify_doc)
         verify_doc.close()
 
-        return FileResponse(
+        return TempFileResponse(
             output_path,
             media_type="application/pdf",
             filename=output_filename,
+            cleanup_after=[output_path],
             headers={
                 "X-Metadata-Before": str(before_report),
                 "X-Metadata-After": str(after_report),
@@ -98,7 +100,7 @@ async def sanitize_metadata(
         )
     except Exception as e:
         logger.error(f"Error en saneamiento: {e}")
-        raise HTTPException(500, f"Error saneando metadatos: {str(e)}")
+        raise HTTPException(500, ERROR_CODES["ERR_METADATA"])
     finally:
         _close_doc(doc)
         safe_remove(tmp_path)

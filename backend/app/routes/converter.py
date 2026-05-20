@@ -8,7 +8,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import FileResponse
 
 from ..services.pdf_converter import PDFConverter
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, TempFileResponse, ERROR_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,8 @@ async def images_to_pdf(files: List[UploadFile] = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Error convirtiendo: {str(e)}")
+        logger.error(f"Error convirtiendo imagenes a PDF: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
     finally:
         for p in image_paths:
             safe_remove(p)
@@ -63,7 +64,8 @@ async def pdf_to_images(file: UploadFile = File(...), dpi: int = Form(200)):
 
         return FileResponse(zip_path, media_type="application/zip", filename="paginas.zip")
     except Exception as e:
-        raise HTTPException(500, f"Error convirtiendo: {str(e)}")
+        logger.error(f"Error convirtiendo PDF a imagenes: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
     finally:
         safe_remove(tmp_path)
 
@@ -89,7 +91,8 @@ async def merge_pdfs(files: List[UploadFile] = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Error combinando PDFs: {str(e)}")
+        logger.error(f"Error combinando PDFs: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
     finally:
         for p in pdf_paths:
             safe_remove(p)

@@ -12,7 +12,7 @@ from ..services.pdf_sensitive import SensitiveDataDetector
 from ..services.pdf_pages import PageManager
 from ..services.pdf_watermark import Watermarker
 from ..services.audit_log import AuditLogger
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,8 @@ async def detect_sensitive(file: UploadFile = File(...)):
         AuditLogger.log_operation("detect_sensitive", file.filename, {"found": report["total"]})
         return report
     except Exception as e:
-        raise HTTPException(500, f"Error detectando datos: {str(e)}")
+        logger.error(f"Error detectando datos: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.post("/rotate-pages")
@@ -65,7 +66,8 @@ async def rotate_pages(
         AuditLogger.log_operation("rotate_pages", file.filename, {"pages": page_indices, "degrees": degrees})
         return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        raise HTTPException(500, f"Error rotando paginas: {str(e)}")
+        logger.error(f"Error rotando paginas: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.post("/delete-pages")
@@ -92,7 +94,8 @@ async def delete_pages(
         AuditLogger.log_operation("delete_pages", file.filename, {"pages_removed": page_indices})
         return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        raise HTTPException(500, f"Error eliminando paginas: {str(e)}")
+        logger.error(f"Error eliminando paginas: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.post("/reorder-pages")
@@ -120,7 +123,8 @@ async def reorder_pages(
         AuditLogger.log_operation("reorder_pages", file.filename, {"new_order": new_order})
         return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        raise HTTPException(500, f"Error reordenando paginas: {str(e)}")
+        logger.error(f"Error reordenando paginas: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.post("/watermark")
@@ -149,7 +153,8 @@ async def apply_watermark(
         AuditLogger.log_operation("watermark", file.filename, {"text": text})
         return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        raise HTTPException(500, f"Error aplicando marca de agua: {str(e)}")
+        logger.error(f"Error aplicando marca de agua: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.post("/stamp")
@@ -178,7 +183,8 @@ async def apply_stamp(
         AuditLogger.log_operation("stamp", file.filename, {"text": text, "page": page})
         return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        raise HTTPException(500, f"Error aplicando sello: {str(e)}")
+        logger.error(f"Error aplicando sello: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.get("/audit-logs")
@@ -285,7 +291,8 @@ async def add_pages(
         AuditLogger.log_operation("add_pages", file.filename, {"count": count, "position": position})
         return FileResponse(output_path, media_type="application/pdf", filename=output_filename)
     except Exception as e:
-        raise HTTPException(500, f"Error agregando paginas: {str(e)}")
+        logger.error(f"Error agregando paginas: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
 
 
 @router.post("/add-text")
@@ -360,7 +367,8 @@ async def add_text(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(500, f"Error agregando texto: {str(e)}")
+        logger.error(f"Error agregando texto: {e}")
+        raise HTTPException(500, ERROR_CODES["ERR_INTERNAL"])
     finally:
         if doc:
             try:

@@ -18,6 +18,45 @@ from typing import List, Dict, Tuple
 
 logger = logging.getLogger(__name__)
 
+
+def _validate_rut(rut_str: str) -> bool:
+    """Valida digito verificador de RUT chileno."""
+    clean = re.sub(r'[^0-9kK]', '', rut_str)
+    if len(clean) < 2:
+        return False
+    body = clean[:-1]
+    dv = clean[-1].upper()
+    try:
+        num = int(body)
+    except ValueError:
+        return False
+    if num < 1000000 or num > 99999999:
+        return False
+    factors = [2, 3, 4, 5, 6, 7]
+    total = 0
+    for i, digit in enumerate(reversed(str(num))):
+        total += int(digit) * factors[i % 6]
+    remainder = 11 - (total % 11)
+    expected = {11: '0', 10: 'K'}.get(remainder, str(remainder))
+    return dv == expected
+
+
+def _validate_luhn(number_str: str) -> bool:
+    """Valida numero con algoritmo de Luhn (tarjetas de credito)."""
+    digits = re.sub(r'\D', '', number_str)
+    if len(digits) < 13 or len(digits) > 19:
+        return False
+    total = 0
+    reverse = digits[::-1]
+    for i, ch in enumerate(reverse):
+        d = int(ch)
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
 SENSITIVE_PATTERNS = {
     "rut": {
         "regex": r"\b\d{1,2}\.?\d{3}\.?\d{3}[-][\dkK]\b",
@@ -65,6 +104,12 @@ class SensitiveDataDetector:
                 regex = re.compile(pattern_info["regex"], re.IGNORECASE)
                 for match in regex.finditer(text):
                     search_text = match.group()
+
+                    if pattern_name == "rut" and not _validate_rut(search_text):
+                        continue
+                    if pattern_name == "tarjeta" and not _validate_luhn(search_text):
+                        continue
+
                     instances = page.search_for(search_text)
                     for inst in instances:
                         results.append({
@@ -83,7 +128,6 @@ class SensitiveDataDetector:
 
     @staticmethod
     def detect_page(doc: fitz.Document, page_idx: int) -> List[Dict]:
-        """Escanea una sola pagina."""
         results = []
         if page_idx >= len(doc):
             return results
@@ -95,6 +139,12 @@ class SensitiveDataDetector:
             regex = re.compile(pattern_info["regex"], re.IGNORECASE)
             for match in regex.finditer(text):
                 search_text = match.group()
+
+                if pattern_name == "rut" and not _validate_rut(search_text):
+                    continue
+                if pattern_name == "tarjeta" and not _validate_luhn(search_text):
+                    continue
+
                 instances = page.search_for(search_text)
                 for inst in instances:
                     results.append({
