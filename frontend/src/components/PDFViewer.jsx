@@ -229,10 +229,10 @@ export default function PDFViewer({
               fontSize: previewFontSize,
               fontFamily: previewFont,
               textAlign: previewAlign,
-              lineHeight: 1.2,
-              padding: '4px',
+              lineHeight: 1.15,
               overflow: 'hidden',
-              wordBreak: 'break-word',
+              wordBreak: 'break-all',
+              whiteSpace: 'pre-wrap',
             }}>
               {textPreview.content}
             </div>
