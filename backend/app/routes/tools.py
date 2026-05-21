@@ -12,7 +12,7 @@ from ..services.pdf_sensitive import SensitiveDataDetector
 from ..services.pdf_pages import PageManager
 from ..services.pdf_watermark import Watermarker
 from ..services.audit_log import AuditLogger
-from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES, validate_pdf_upload
+from ..config import UPLOAD_DIR, OUTPUT_DIR, MAX_FILE_SIZE, safe_remove, ERROR_CODES, validate_pdf_upload, TempFileResponse
 
 logger = logging.getLogger(__name__)
 
