@@ -48,7 +48,8 @@ class PDFSignature:
 
         font_size = 7
         line_height = font_size + 3
-        padding = 8
+        padding_top = 10
+        padding_bottom = 6
 
         lines = [
             f"Firmado por: {signer_name}",
@@ -61,7 +62,7 @@ class PDFSignature:
             lines.append(f"SHA-256: {doc_hash[:32]}")
             lines.append(f"         {doc_hash[32:]}")
 
-        text_height = padding + len(lines) * line_height + padding
+        text_height = padding_top + len(lines) * line_height + padding_bottom
 
         rect = fitz.Rect(
             position.x, position.y,
@@ -74,8 +75,8 @@ class PDFSignature:
             shape.draw_rect(rect)
             shape.finish(color=(0, 0, 0.6), width=1.5)
 
-        text_x = rect.x0 + padding
-        text_y = rect.y0 + padding + font_size
+        text_x = rect.x0 + padding_top
+        text_y = rect.y0 + padding_top + font_size
 
         for line in lines:
             shape.insert_text(
