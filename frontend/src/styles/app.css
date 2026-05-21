@@ -1072,10 +1072,11 @@ html, body, #root {
 .text-preview-content {
   color: #111;
   position: absolute;
-  top: 18px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  padding-top: 2px;
 }
 
 .panel-tabs {
