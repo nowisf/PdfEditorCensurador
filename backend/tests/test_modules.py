@@ -182,7 +182,7 @@ class TestSensitiveDetector:
         output = tempfile.mktemp(suffix=".pdf")
         doc = fitz.open()
         page = doc.new_page()
-        page.insert_text(fitz.Point(72, 72), "El RUT del funcionario es 12.345.678-9", fontsize=12)
+        page.insert_text(fitz.Point(72, 72), "El RUT del funcionario es 12.345.678-5", fontsize=12)
         doc.save(output)
         doc.close()
 

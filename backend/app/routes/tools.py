@@ -343,7 +343,7 @@ async def add_text(
 
         kwargs = dict(
             rect=rect,
-            text=text,
+            buffer=text,
             fontsize=fontsize,
             color=(color_r, color_g, color_b),
             align=align,

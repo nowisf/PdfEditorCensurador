@@ -49,26 +49,17 @@ class Watermarker:
                 cos_a = math.cos(rad)
                 sin_a = math.sin(rad)
 
-                left = fitz.Point(text_x, text_y)
-                right = fitz.Point(text_x + text_width, text_y)
-                rotated_left = fitz.Point(
-                    center_x + (left.x - center_x) * cos_a - (left.y - center_y) * sin_a,
-                    center_y + (left.x - center_x) * sin_a + (left.y - center_y) * cos_a,
-                )
-                rotated_right = fitz.Point(
-                    center_x + (right.x - center_x) * cos_a - (right.y - center_y) * sin_a,
-                    center_y + (right.x - center_x) * sin_a + (right.y - center_y) * cos_a,
-                )
-
-                page.insert_textbox(
-                    fitz.Rect(0, 0, rect.width, rect.height),
+                shape = page.new_shape()
+                shape.insert_text(
+                    fitz.Point(text_x, text_y),
                     text,
-                    fontname="helv",
                     fontsize=fontsize,
+                    fontname="helv",
                     color=color,
                     render_mode=0,
-                    morph=(fitz.Point(center_x, center_y), fitz.Matrix(cos_a, sin_a, -sin_a, cos_a)),
+                    morph=(fitz.Point(center_x, center_y), fitz.Matrix(cos_a, sin_a, -sin_a, cos_a, 0, 0)),
                 )
+                shape.commit()
             else:
                 page.insert_text(
                     fitz.Point(text_x, text_y),
