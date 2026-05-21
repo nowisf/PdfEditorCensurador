@@ -26,7 +26,11 @@ def _close_doc(doc):
 
 @router.post("/inspect")
 async def inspect_metadata(file: UploadFile = File(...)):
-    content = await file.read()`n    try:`n        validate_pdf_upload(content, file.filename)`n    except ValueError as e:`n        raise HTTPException(400, str(e))
+    content = await file.read()
+    try:
+        validate_pdf_upload(content, file.filename)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
@@ -52,7 +56,11 @@ async def sanitize_metadata(
     file: UploadFile = File(...),
     options_json: str = Form("{}"),
 ):
-    content = await file.read()`n    try:`n        validate_pdf_upload(content, file.filename)`n    except ValueError as e:`n        raise HTTPException(400, str(e))
+    content = await file.read()
+    try:
+        validate_pdf_upload(content, file.filename)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
     tmp_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4().hex}_{file.filename}")
     with open(tmp_path, "wb") as f:
